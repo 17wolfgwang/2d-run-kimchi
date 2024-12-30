@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
 public enum GameState
 {
     Intro,
@@ -11,6 +12,8 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
     public GameState State = GameState.Intro;
+
+    public float PlayStartTime;
 
     public int Lives = 3;
 
@@ -24,6 +27,8 @@ public class GameManager : MonoBehaviour
     public GameObject GoldenSpawner;
 
     public Player PlayerScript;
+
+    public TMP_Text scoreText;
 
 
     void Awake()
@@ -39,9 +44,49 @@ public class GameManager : MonoBehaviour
 
     }
 
+    float CalculateScore()
+    {
+        return Time.time - PlayStartTime;
+    }
+
+    void SaveHighScore()
+    {
+        int score = Mathf.FloorToInt(CalculateScore());
+        int currentHighScore = PlayerPrefs.GetInt("highScore");
+        if (score > currentHighScore)
+        {
+            PlayerPrefs.SetInt("highScore", score);
+            PlayerPrefs.Save();
+        }
+    }
+
+    int GetHighScore()
+    {
+        return PlayerPrefs.GetInt("highScore");
+    }
+
+    public float CalculateGameSpeed()
+    {
+        if (State != GameState.Playing)
+        {
+            return 5f;
+        }
+        float speed = 5f + (0.5f * Mathf.Floor(CalculateScore() / 10));
+        return Mathf.Min(speed, 30f);
+
+    }
     // Update is called once per frame
     void Update()
     {
+        if (State == GameState.Playing)
+        {
+            scoreText.text = "Score : " + Mathf.FloorToInt(CalculateScore());
+        }
+        else if (State == GameState.Dead)
+        {
+            scoreText.text = "High Score : " + GetHighScore();
+        }
+
         if (State == GameState.Intro && Input.GetKeyDown(KeyCode.Space))
         {
             State = GameState.Playing;
@@ -49,10 +94,12 @@ public class GameManager : MonoBehaviour
             EnemySpawner.SetActive(true);
             FoodSpawner.SetActive(true);
             GoldenSpawner.SetActive(true);
+            PlayStartTime = Time.time;
 
         }
         if (State == GameState.Playing && Lives == 0)
         {
+            SaveHighScore();
             PlayerScript.KillPlayer();
             EnemySpawner.SetActive(false);
             FoodSpawner.SetActive(false);
